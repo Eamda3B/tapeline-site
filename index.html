@@ -1,0 +1,584 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>TapeLine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* Layout concept: sober trading-terminal shell — sticky ticker-topped nav,
+     content column capped at readable width, hero+grid built from the same
+     "trade card" unit whose visual weight (border/glow) scales with |R|. */
+  :root{
+    --bg:#0c0a08;
+    --bg-raised:#16130e;
+    --bg-raised-2:#1f1b14;
+    --line:#2b2519;
+    --line-soft:#1c1811;
+    --fg:#f1ece2;
+    --fg-muted:#a89c88;
+    --fg-faint:#6f6656;
+    --accent:#e0a038;
+    --accent-soft:#8a6526;
+    --accent-wash:rgba(224,160,56,0.10);
+    --long:#5fb37d;
+    --long-wash:rgba(95,179,125,0.12);
+    --short:#d9645f;
+    --short-wash:rgba(217,100,95,0.12);
+    color-scheme:dark;
+
+    --font-display:'Sora',sans-serif;
+    --font-body:'IBM Plex Sans',sans-serif;
+    --font-mono:'IBM Plex Mono',monospace;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--bg);
+    color:var(--fg);
+    font-family:var(--font-body);
+    padding-left:16px;
+    padding-right:16px;
+  }
+  h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0;}
+  p{margin:0;}
+  a{color:inherit;}
+  ::selection{background:var(--accent-wash);color:var(--fg);}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+  .wrap{max-width:1180px;margin:0 auto;}
+
+  /* ---------- nav ---------- */
+  .nav{
+    position:sticky;
+    top:env(safe-area-inset-top,0px);
+    z-index:40;
+    background:rgba(12,10,8,0.86);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line-soft);
+  }
+  .nav-inner{
+    max-width:1180px;margin:0 auto;
+    display:flex;align-items:center;justify-content:space-between;
+    padding-block:14px;gap:16px;
+  }
+  .logo{
+    font-family:var(--font-display);font-weight:700;font-size:1.05rem;
+    letter-spacing:0.01em;display:flex;align-items:center;gap:8px;
+  }
+  .logo-mark{
+    width:9px;height:9px;border-radius:2px;background:var(--accent);
+    box-shadow:0 0 10px var(--accent-wash);flex:none;
+  }
+  .nav-links{display:flex;align-items:center;gap:10px;}
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;
+    font-family:var(--font-body);font-weight:600;font-size:0.85rem;
+    padding:9px 16px;border-radius:6px;white-space:nowrap;
+    text-decoration:none;border:1px solid transparent;
+    transition:transform .15s ease, border-color .15s ease, background .15s ease;
+  }
+  .btn:hover{transform:translateY(-1px);}
+  .btn-primary{background:var(--accent);color:#191207;}
+  .btn-primary:hover{background:#eab157;}
+  .btn-ghost{border-color:var(--line);color:var(--fg-muted);}
+  .btn-ghost:hover{border-color:var(--accent-soft);color:var(--fg);}
+  .btn-sm{padding:7px 12px;font-size:0.78rem;}
+
+  /* ---------- ticker ---------- */
+  .ticker-bar{
+    border-bottom:1px solid var(--line-soft);
+    background:var(--bg-raised);
+    overflow:hidden;
+  }
+  .ticker-track{
+    display:flex;gap:48px;white-space:nowrap;
+    font-family:var(--font-mono);font-size:0.74rem;letter-spacing:0.02em;
+    color:var(--fg-faint);
+    padding-block:8px;
+    width:max-content;
+    animation:ticker 38s linear infinite;
+  }
+  .ticker-track span{display:inline-flex;gap:8px;align-items:center;}
+  .ticker-track .t-long{color:var(--long);}
+  .ticker-track .t-short{color:var(--short);}
+  @keyframes ticker{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+  @media (prefers-reduced-motion: reduce){
+    .ticker-track{animation:none;overflow-x:auto;}
+  }
+
+  /* ---------- section rhythm ---------- */
+  section{padding-block:clamp(52px,8vw,96px);}
+  .eyebrow{
+    font-family:var(--font-mono);font-size:0.74rem;letter-spacing:0.14em;
+    text-transform:uppercase;color:var(--accent);margin-bottom:14px;
+    display:flex;align-items:center;gap:8px;
+  }
+  .eyebrow::before{content:"";width:14px;height:1px;background:var(--accent-soft);}
+
+  /* ---------- hero ---------- */
+  .hero-top{padding-block-start:clamp(48px,9vw,88px);padding-block-end:8px;}
+  .hero-head{max-width:640px;}
+  .hero-head h1{
+    font-size:clamp(2.1rem,4.4vw,3.4rem);font-weight:700;line-height:1.08;
+    letter-spacing:-0.01em;
+  }
+  .hero-head h1 em{font-style:normal;color:var(--accent);}
+  .hero-sub{
+    margin-top:18px;font-size:1.02rem;line-height:1.65;color:var(--fg-muted);
+    max-width:56ch;
+  }
+  .hero-cta{display:flex;gap:12px;margin-top:30px;flex-wrap:wrap;}
+
+  /* ---------- trade card ---------- */
+  .card{
+    position:relative;
+    border-radius:10px;
+    border:1px solid var(--line);
+    background:var(--bg-raised);
+    overflow:hidden;
+    transition:transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+  }
+  .card:hover{transform:translateY(-3px);}
+  .card-thumb{
+    position:relative;aspect-ratio:16/9;width:100%;
+    background:
+      radial-gradient(120% 100% at 10% 0%, var(--bg-raised-2) 0%, var(--bg) 70%);
+    overflow:hidden;
+  }
+  .card-thumb svg{position:absolute;inset:0;width:100%;height:100%;}
+  .demo-tag{
+    position:absolute;top:10px;left:10px;
+    font-family:var(--font-mono);font-size:0.62rem;letter-spacing:0.08em;
+    color:var(--fg-faint);background:rgba(12,10,8,0.7);
+    border:1px solid var(--line);border-radius:4px;padding:3px 6px;
+    text-transform:uppercase;
+  }
+  .dur-tag{
+    position:absolute;top:10px;right:10px;
+    font-family:var(--font-mono);font-size:0.72rem;color:var(--fg);
+    background:rgba(12,10,8,0.7);border:1px solid var(--line);
+    border-radius:4px;padding:3px 7px;font-variant-numeric:tabular-nums;
+  }
+  .play{
+    position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:46px;height:46px;border-radius:50%;
+    background:rgba(12,10,8,0.55);border:1px solid rgba(241,236,226,0.28);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .play::after{
+    content:"";border-style:solid;border-width:7px 0 7px 11px;
+    border-color:transparent transparent transparent var(--fg);
+    margin-left:3px;
+  }
+  .card-overlay{
+    position:absolute;left:0;right:0;bottom:0;padding:12px 12px 11px;
+    background:linear-gradient(to top, rgba(12,10,8,0.92) 10%, rgba(12,10,8,0) 100%);
+    display:flex;align-items:flex-end;justify-content:space-between;gap:10px;
+  }
+  .card-asset{font-family:var(--font-mono);font-size:0.78rem;color:var(--fg-muted);}
+  .card-asset b{color:var(--fg);font-weight:600;}
+  .pill{
+    font-family:var(--font-mono);font-size:0.68rem;font-weight:600;
+    letter-spacing:0.05em;padding:2px 7px;border-radius:3px;
+    display:inline-block;margin-top:4px;
+  }
+  .pill-long{color:var(--long);background:var(--long-wash);}
+  .pill-short{color:var(--short);background:var(--short-wash);}
+  .card-result{
+    font-family:var(--font-mono);font-size:1.3rem;font-weight:600;
+    font-variant-numeric:tabular-nums;text-align:right;
+  }
+  .r-pos{color:var(--long);}
+  .r-neg{color:var(--short);}
+
+  /* intensity: sober -> spectacular */
+  .card.i1{box-shadow:none;}
+  .card.i2{border-color:var(--accent-soft);box-shadow:0 0 0 1px var(--accent-wash);}
+  .card.i3{
+    border-color:var(--accent);
+    box-shadow:0 0 0 1px var(--accent-wash), 0 18px 40px -18px var(--accent-wash), 0 0 32px -6px rgba(224,160,56,0.22);
+  }
+  .card.i3 .card-thumb::after{
+    content:"";position:absolute;inset:0;
+    background:radial-gradient(60% 60% at 50% 40%, rgba(224,160,56,0.14), transparent 70%);
+  }
+
+  /* ---------- hero card ---------- */
+  .hero-card-wrap{margin-top:40px;}
+  .hero-card{display:grid;grid-template-columns:1.35fr 1fr;}
+  .hero-card .card-thumb{aspect-ratio:auto;height:100%;min-height:280px;}
+  .hero-side{
+    padding:26px 26px 24px;display:flex;flex-direction:column;justify-content:space-between;
+    background:var(--bg-raised);border-left:1px solid var(--line);
+  }
+  .hero-meta{font-family:var(--font-mono);}
+  .hero-meta-row{display:flex;justify-content:space-between;align-items:baseline;
+    padding-block:9px;border-bottom:1px solid var(--line-soft);}
+  .hero-meta-row:first-child{padding-top:0;}
+  .hero-meta-label{font-size:0.7rem;letter-spacing:0.08em;color:var(--fg-faint);text-transform:uppercase;}
+  .hero-meta-value{font-size:0.92rem;color:var(--fg);font-variant-numeric:tabular-nums;}
+  .hero-result{margin-top:18px;}
+  .hero-result .num{font-family:var(--font-mono);font-size:2.6rem;font-weight:600;
+    font-variant-numeric:tabular-nums;line-height:1;}
+  .hero-result .cap{font-size:0.72rem;letter-spacing:0.1em;color:var(--fg-faint);
+    text-transform:uppercase;margin-top:6px;}
+
+  @media (max-width:720px){
+    .hero-card{grid-template-columns:1fr;}
+    .hero-card .card-thumb{min-height:200px;}
+    .hero-side{border-left:none;border-top:1px solid var(--line);}
+  }
+
+  /* ---------- feed ---------- */
+  .feed-head{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap;}
+  .feed-head h2{font-size:clamp(1.5rem,2.6vw,2rem);}
+  .feed-head p{color:var(--fg-muted);font-size:0.92rem;max-width:44ch;}
+  .grid{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:18px;
+    margin-top:32px;
+  }
+  @media (max-width:900px){.grid{grid-template-columns:repeat(2,1fr);}}
+  @media (max-width:560px){.grid{grid-template-columns:1fr;}}
+
+  /* ---------- credibility ---------- */
+  .cred{border-top:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft);}
+  .cred-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;
+    background:var(--line-soft);border:1px solid var(--line-soft);border-radius:10px;overflow:hidden;}
+  .cred-item{background:var(--bg);padding:22px 20px;min-width:0;}
+  .cred-item .k{font-family:var(--font-mono);color:var(--accent);font-size:0.72rem;
+    letter-spacing:0.08em;text-transform:uppercase;}
+  .cred-item .v{margin-top:8px;font-size:0.95rem;line-height:1.5;color:var(--fg-muted);}
+  @media (max-width:900px){.cred-grid{grid-template-columns:repeat(2,1fr);}}
+  @media (max-width:520px){.cred-grid{grid-template-columns:1fr;}}
+
+  /* ---------- final cta ---------- */
+  .final{text-align:center;}
+  .final-inner{max-width:560px;margin:0 auto;}
+  .final h2{font-size:clamp(1.7rem,3.4vw,2.4rem);}
+  .final p{margin-top:14px;color:var(--fg-muted);font-size:1rem;}
+  .final .hero-cta{justify-content:center;margin-top:28px;}
+
+  /* ---------- footer ---------- */
+  footer{
+    border-top:1px solid var(--line-soft);padding-block:28px;
+    padding-bottom:calc(28px + env(safe-area-inset-bottom,0px));
+  }
+  .foot-inner{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;
+    font-size:0.78rem;color:var(--fg-faint);}
+  .foot-inner strong{color:var(--fg-muted);font-family:var(--font-mono);}
+  .foot-disclaimer{max-width:56ch;line-height:1.6;}
+</style>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="logo"><span class="logo-mark"></span>TapeLine</div>
+    <div class="nav-links">
+      <a class="btn btn-ghost btn-sm" href="https://x.com/Eamda3B" target="_blank" rel="noopener noreferrer">X / Twitter</a>
+      <a class="btn btn-primary btn-sm" href="https://discord.gg/Y2GAt9y63" target="_blank" rel="noopener noreferrer">Rejoindre le Discord</a>
+    </div>
+  </div>
+</nav>
+
+<div class="ticker-bar">
+  <div class="ticker-track" aria-hidden="true">
+    <span>NQ <span class="t-long">LONG +6.4R</span> · 42:18</span>
+    <span>ES <span class="t-short">SHORT +1.2R</span> · 08:03</span>
+    <span>NQ <span class="t-long">LONG +2.8R</span> · 15:47</span>
+    <span>ES <span class="t-long">LONG +0.6R</span> · 04:12</span>
+    <span>NQ <span class="t-short">SHORT +3.5R</span> · 22:09</span>
+    <span>ES <span class="t-short">SHORT +1.8R</span> · 11:36</span>
+    <span>NQ <span class="t-long">LONG −1.0R</span> · 06:54</span>
+    <span>ES <span class="t-long">LONG +4.1R</span> · 19:22</span>
+    <!-- duplicated for seamless loop -->
+    <span>NQ <span class="t-long">LONG +6.4R</span> · 42:18</span>
+    <span>ES <span class="t-short">SHORT +1.2R</span> · 08:03</span>
+    <span>NQ <span class="t-long">LONG +2.8R</span> · 15:47</span>
+    <span>ES <span class="t-long">LONG +0.6R</span> · 04:12</span>
+    <span>NQ <span class="t-short">SHORT +3.5R</span> · 22:09</span>
+    <span>ES <span class="t-short">SHORT +1.8R</span> · 11:36</span>
+    <span>NQ <span class="t-long">LONG −1.0R</span> · 06:54</span>
+    <span>ES <span class="t-long">LONG +4.1R</span> · 19:22</span>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- ===== HERO ===== -->
+  <section class="hero-top">
+    <div class="eyebrow">Futures indices US · NQ / ES</div>
+    <div class="hero-head">
+      <h1>Le trade tel qu'il s'est <em>vraiment</em> passé.</h1>
+      <p class="hero-sub">TapeLine documente des trades pris en direct sur les futures Nasdaq et S&amp;P&nbsp;500&nbsp;— la chart réelle, la lecture d'orderflow, le résultat brut. Gagnant ou perdant, sans reconstitution.</p>
+    </div>
+    <div class="hero-cta">
+      <a class="btn btn-primary" href="https://discord.gg/Y2GAt9y63" target="_blank" rel="noopener noreferrer">Rejoindre le Discord</a>
+      <a class="btn btn-ghost" href="https://x.com/Eamda3B" target="_blank" rel="noopener noreferrer">Suivre sur X</a>
+    </div>
+
+    <div class="hero-card-wrap">
+      <div class="card i3 hero-card">
+        <div class="card-thumb">
+          <svg viewBox="0 0 400 280" preserveAspectRatio="none">
+            <line x1="0" y1="230" x2="400" y2="230" stroke="#2b2519" stroke-width="1"/>
+            <line x1="0" y1="170" x2="400" y2="170" stroke="#2b2519" stroke-width="1"/>
+            <line x1="0" y1="110" x2="400" y2="110" stroke="#2b2519" stroke-width="1"/>
+            <path d="M0,220 L30,224 L60,205 L90,212 L120,190 L150,196 L180,160 L210,168 L240,132 L270,140 L300,96 L330,104 L360,58 L400,44" fill="none" stroke="#e0a038" stroke-width="2.5"/>
+            <path d="M0,220 L30,224 L60,205 L90,212 L120,190 L150,196 L180,160 L210,168 L240,132 L270,140 L300,96 L330,104 L360,58 L400,44 L400,280 L0,280 Z" fill="url(#heroFade)" opacity="0.5"/>
+            <defs>
+              <linearGradient id="heroFade" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#e0a038" stop-opacity="0.28"/>
+                <stop offset="100%" stop-color="#e0a038" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <span class="demo-tag">Aperçu — vidéo à venir</span>
+          <span class="dur-tag">42:18</span>
+          <div class="play"></div>
+        </div>
+        <div class="hero-side">
+          <div class="hero-meta">
+            <div class="hero-meta-row">
+              <span class="hero-meta-label">Contrat</span>
+              <span class="hero-meta-value">NQ — Nasdaq&nbsp;100</span>
+            </div>
+            <div class="hero-meta-row">
+              <span class="hero-meta-label">Direction</span>
+              <span class="pill pill-long">LONG</span>
+            </div>
+            <div class="hero-meta-row">
+              <span class="hero-meta-label">Durée</span>
+              <span class="hero-meta-value">42m 18s</span>
+            </div>
+          </div>
+          <div class="hero-result">
+            <div class="num r-pos">+6.4R</div>
+            <div class="cap">Résultat de session</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FEED ===== -->
+  <section class="feed">
+    <div class="feed-head">
+      <div>
+        <div class="eyebrow">Flux de trades</div>
+        <h2>Derniers trades documentés</h2>
+        <p>Chaque carte affiche l'actif, la direction, le résultat en R et la durée avant même la lecture.</p>
+      </div>
+    </div>
+
+    <!-- Grille : remplacer thumbnail SVG + vidéo + données par trade réel publié -->
+    <div class="grid">
+
+      <div class="card i1">
+        <div class="card-thumb">
+          <svg viewBox="0 0 300 169" preserveAspectRatio="none">
+            <path d="M0,60 L40,66 L80,50 L120,58 L160,46 L200,52 L240,40 L300,46" fill="none" stroke="#8a6526" stroke-width="2"/>
+          </svg>
+          <span class="demo-tag">Démo</span>
+          <span class="dur-tag">08:03</span>
+          <div class="play"></div>
+          <div class="card-overlay">
+            <div>
+              <div class="card-asset"><b>ES</b> · S&amp;P 500</div>
+              <span class="pill pill-short">SHORT</span>
+            </div>
+            <div class="card-result r-pos">+1.2R</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card i2">
+        <div class="card-thumb">
+          <svg viewBox="0 0 300 169" preserveAspectRatio="none">
+            <path d="M0,120 L40,114 L80,122 L120,96 L160,102 L200,70 L240,78 L300,40" fill="none" stroke="#e0a038" stroke-width="2"/>
+          </svg>
+          <span class="demo-tag">Démo</span>
+          <span class="dur-tag">15:47</span>
+          <div class="play"></div>
+          <div class="card-overlay">
+            <div>
+              <div class="card-asset"><b>NQ</b> · Nasdaq 100</div>
+              <span class="pill pill-long">LONG</span>
+            </div>
+            <div class="card-result r-pos">+2.8R</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card i1">
+        <div class="card-thumb">
+          <svg viewBox="0 0 300 169" preserveAspectRatio="none">
+            <path d="M0,90 L40,86 L80,92 L120,80 L160,84 L200,74 L240,78 L300,66" fill="none" stroke="#8a6526" stroke-width="2"/>
+          </svg>
+          <span class="demo-tag">Démo</span>
+          <span class="dur-tag">04:12</span>
+          <div class="play"></div>
+          <div class="card-overlay">
+            <div>
+              <div class="card-asset"><b>ES</b> · S&amp;P 500</div>
+              <span class="pill pill-long">LONG</span>
+            </div>
+            <div class="card-result r-pos">+0.6R</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card i3">
+        <div class="card-thumb">
+          <svg viewBox="0 0 300 169" preserveAspectRatio="none">
+            <path d="M0,40 L40,48 L80,36 L120,58 L160,52 L200,86 L240,78 L300,120" fill="none" stroke="#e0a038" stroke-width="2.5"/>
+          </svg>
+          <span class="demo-tag">Démo</span>
+          <span class="dur-tag">22:09</span>
+          <div class="play"></div>
+          <div class="card-overlay">
+            <div>
+              <div class="card-asset"><b>NQ</b> · Nasdaq 100</div>
+              <span class="pill pill-short">SHORT</span>
+            </div>
+            <div class="card-result r-pos">+3.5R</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card i2">
+        <div class="card-thumb">
+          <svg viewBox="0 0 300 169" preserveAspectRatio="none">
+            <path d="M0,60 L40,68 L80,56 L120,74 L160,66 L200,92 L240,84 L300,100" fill="none" stroke="#e0a038" stroke-width="2"/>
+          </svg>
+          <span class="demo-tag">Démo</span>
+          <span class="dur-tag">11:36</span>
+          <div class="play"></div>
+          <div class="card-overlay">
+            <div>
+              <div class="card-asset"><b>ES</b> · S&amp;P 500</div>
+              <span class="pill pill-short">SHORT</span>
+            </div>
+            <div class="card-result r-pos">+1.8R</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card i1">
+        <div class="card-thumb">
+          <svg viewBox="0 0 300 169" preserveAspectRatio="none">
+            <path d="M0,70 L40,64 L80,72 L120,60 L160,80 L200,74 L240,96 L300,90" fill="none" stroke="#8a6526" stroke-width="2"/>
+          </svg>
+          <span class="demo-tag">Démo</span>
+          <span class="dur-tag">06:54</span>
+          <div class="play"></div>
+          <div class="card-overlay">
+            <div>
+              <div class="card-asset"><b>NQ</b> · Nasdaq 100</div>
+              <span class="pill pill-long">LONG</span>
+            </div>
+            <div class="card-result r-neg">&minus;1.0R</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card i3">
+        <div class="card-thumb">
+          <svg viewBox="0 0 300 169" preserveAspectRatio="none">
+            <path d="M0,130 L40,120 L80,124 L120,96 L160,102 L200,66 L240,72 L300,30" fill="none" stroke="#e0a038" stroke-width="2.5"/>
+          </svg>
+          <span class="demo-tag">Démo</span>
+          <span class="dur-tag">19:22</span>
+          <div class="play"></div>
+          <div class="card-overlay">
+            <div>
+              <div class="card-asset"><b>ES</b> · S&amp;P 500</div>
+              <span class="pill pill-long">LONG</span>
+            </div>
+            <div class="card-result r-pos">+4.1R</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card i2">
+        <div class="card-thumb">
+          <svg viewBox="0 0 300 169" preserveAspectRatio="none">
+            <path d="M0,50 L40,58 L80,46 L120,64 L160,56 L200,78 L240,70 L300,88" fill="none" stroke="#e0a038" stroke-width="2"/>
+          </svg>
+          <span class="demo-tag">Démo</span>
+          <span class="dur-tag">09:58</span>
+          <div class="play"></div>
+          <div class="card-overlay">
+            <div>
+              <div class="card-asset"><b>NQ</b> · Nasdaq 100</div>
+              <span class="pill pill-short">SHORT</span>
+            </div>
+            <div class="card-result r-pos">+2.1R</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card i2">
+        <div class="card-thumb">
+          <svg viewBox="0 0 300 169" preserveAspectRatio="none">
+            <path d="M0,100 L40,94 L80,102 L120,84 L160,90 L200,68 L240,74 L300,56" fill="none" stroke="#e0a038" stroke-width="2"/>
+          </svg>
+          <span class="demo-tag">Démo</span>
+          <span class="dur-tag">07:40</span>
+          <div class="play"></div>
+          <div class="card-overlay">
+            <div>
+              <div class="card-asset"><b>ES</b> · S&amp;P 500</div>
+              <span class="pill pill-long">LONG</span>
+            </div>
+            <div class="card-result r-pos">+1.5R</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ===== CREDIBILITÉ ===== -->
+  <section class="cred">
+    <div class="eyebrow">Cadre</div>
+    <div class="cred-grid">
+      <div class="cred-item">
+        <div class="k">Univers</div>
+        <div class="v">Futures indices US uniquement — Nasdaq (NQ) &amp; S&amp;P 500 (ES). Aucun autre actif.</div>
+      </div>
+      <div class="cred-item">
+        <div class="k">Méthode</div>
+        <div class="v">Lecture de structure de marché et d'orderflow — Auction Market Theory, pas de signal automatisé.</div>
+      </div>
+      <div class="cred-item">
+        <div class="k">Transparence</div>
+        <div class="v">Chaque trade publié l'est — gagnant ou perdant. Aucune vidéo retirée après coup.</div>
+      </div>
+      <div class="cred-item">
+        <div class="k">Source</div>
+        <div class="v">Capture directe de la plateforme de trading. Replay fidèle, aucune reconstitution.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CTA FINAL ===== -->
+  <section class="final">
+    <div class="final-inner">
+      <div class="eyebrow" style="justify-content:center;">Communauté</div>
+      <h2>Suis les trades, pas les promesses.</h2>
+      <p>Nouveaux trades documentés au fil des sessions. Le flux se construit en direct — rejoins la communauté pour ne rien manquer.</p>
+      <div class="hero-cta">
+        <a class="btn btn-primary" href="https://discord.gg/Y2GAt9y63" target="_blank" rel="noopener noreferrer">Rejoindre le Discord</a>
+        <a class="btn btn-ghost" href="https://x.com/Eamda3B" target="_blank" rel="noopener noreferrer">Suivre sur X</a>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  <div class="wrap foot-inner">
+    <div><strong>TapeLine</strong> — trades filmés, futures indices US.</div>
+    <div class="foot-disclaimer">Contenu à but éducatif et informatif. Ne constitue pas un conseil en investissement. Le trading sur produits dérivés comporte un risque de perte en capital.</div>
+  </div>
+</footer>
+
+</body></html>
